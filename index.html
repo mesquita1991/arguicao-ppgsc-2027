@@ -13,6 +13,19 @@ body[data-focus] aside,body[data-focus] header,body[data-focus] #reading,body[da
 body[data-focus] .grid{grid-template-columns:1fr}body[data-focus] .stage{min-height:38vh}
 .elapsed{font-variant-numeric:tabular-nums}.coach{color:var(--gold);min-height:1.55em}
 @media(max-width:670px){nav{gap:.3rem}nav button{flex:1;padding:.4rem;font-size:.9rem}.stats{font-size:.875rem}.stage{min-height:140px}}
+
+#labTools{border:1px solid var(--line);padding:.9rem;border-radius:.8rem;margin:.8rem 0;background:#0e1e24}
+#labTools summary{font-weight:700}#labTools label{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+#labTools .bar{gap:.7rem}#labTools input[type=range]{max-width:100%;accent-color:var(--accent)}
+#labTimeline{width:100%;accent-color:var(--accent)}#labQuiz input{width:min(100%,24rem)}
+#labStats{font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;gap:.5rem}
+#labStats span{border:1px solid var(--line);border-radius:.5rem;padding:.3rem .6rem}
+#labStageActions{justify-content:center}#labTimes{font-variant-numeric:tabular-nums}
+#labProfileTable{overflow:auto}#labTools select{max-width:100%}
+#labQuiz{border:1px solid var(--line);border-radius:.7rem;padding:.75rem}
+#labRate{width:5.5rem}#labStatus{min-height:1.5em}#labTools kbd{border:1px solid var(--line);padding:.08em .3em;border-radius:.25rem}
+@media(max-width:670px){#labTools .bar label{flex:1 1 100%}#labTools button{flex:1 1 auto}#labStageActions button{flex:1}#labTools{padding:.65rem}}
+
 </style>
 <main><header><p class="eyebrow">PPGSC · UFPB 2027</p><h1>Ensaio de arguição</h1><div class="stats" id="totals"></div><p class="muted">Discurso integral com navegação por palavra, treino de evocação e conferência literal.</p></header>
 <div class="grid"><aside class="panel"><h2>Blocos</h2><div id="blocks"></div><p class="muted" id="master"></p></aside>
@@ -342,4 +355,180 @@ $("lap").onclick=()=>{
 };
 $("stopSolo").onclick=finishSolo;
 refreshMaster();renderWord();renderClock();
+
+/* Reader laboratory v2. Original source, tokens and timing weights are unchanged. */
+(function(){
+ const modes=[["full","Integral"],["initial","Apenas iniciais"],["prefix","Início da palavra"],["suffix","Final da palavra"],["skeleton","Consoantes"],["cloze","Lacunas progressivas"],["blind","Sem pistas"],["quiz","Digitar a palavra"]];
+ const oldRender=renderWord,oldClock=renderClock,oldBlock=renderBlock;
+ const defaults=()=>({mode:"full",rate:1,amount:45,context:true,gloss:false,autoLevel:false,targets:blocks.map(b=>b.seconds),xp:0,streak:0,bestStreak:0,correct:0,attempts:0,selfKnown:0,selfHard:0,selfMiss:0,history:{},loop:false});
+ const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+ const num=(v,d,a,b)=>Number.isFinite(Number(v))?clamp(Number(v),a,b):d;
+ function sanitize(obj){
+  const d=defaults();if(!obj||typeof obj!=="object")return d;
+  d.mode=modes.some(x=>x[0]===obj.mode)?obj.mode:d.mode;
+  d.rate=num(obj.rate,1,.25,3);d.amount=num(obj.amount,45,0,100);
+  for(const k of ["context","gloss","autoLevel","loop"])if(typeof obj[k]==="boolean")d[k]=obj[k];
+  d.targets=blocks.map((b,i)=>num(obj.targets?.[i],b.seconds,10,1200));
+  for(const k of ["xp","streak","bestStreak","correct","attempts","selfKnown","selfHard","selfMiss"])d[k]=Math.floor(num(obj[k],0,0,10000000));
+  d.correct=Math.min(d.correct,d.attempts);d.bestStreak=Math.max(d.bestStreak,d.streak);
+  for(const [k,v] of Object.entries(obj.history||{}))if(/^\d+$/.test(k)&&+k<words.length&&v&&typeof v==="object")d.history[k]={ok:Math.floor(num(v.ok,0,0,100000)),miss:Math.floor(num(v.miss,0,0,100000)),hard:Math.floor(num(v.hard,0,0,100000))};
+  return d;
+ }
+ let lab=sanitize(saved.readerLab);let revealed=-1;let quizAnswered=false;let quizIndex=-1;let challengeMode=false;
+ function store(){saved.readerLab=lab;save()}
+ const tools=el("details");tools.id="labTools";tools.open=true;
+ put(tools,"summary","Laboratório de leitura e desafios");
+ const description=put(tools,"p","O texto permanece literal. Os tempos originais são preservados; o ritmo personalizado altera apenas a reprodução.");description.className="muted";
+ const bar=()=>{const x=put(tools,"div");x.className="bar";return x};
+ const label=(p,t)=>put(p,"label",t);
+ function input(p,id,type,value,min,max,step){const e=put(p,"input");e.id=id;e.type=type;if(value!==undefined)e.value=value;if(min!==undefined)e.min=min;if(max!==undefined)e.max=max;if(step!==undefined)e.step=step;return e}
+ function check(p,id,title){const l=label(p,"");const e=input(l,id,"checkbox");l.append(document.createTextNode(" "+title));return e}
+ function button(p,id,t,fn){const b=put(p,"button",t);b.id=id;b.type="button";b.onclick=fn;return b}
+ const a=bar(), mode=put(label(a,"Modo"),"select");mode.id="labMode";
+ for(const [id,title] of modes)put(mode,"option",title).value=id;
+ const speed=input(label(a,"Velocidade global ×"),"labRate","number",1,.25,3,.05);
+ const amount=input(label(a,"Intensidade / %"),"labAmount","range",45,0,100,5);
+ const amountLabel=put(a,"span");amountLabel.className="muted";
+ const b=bar(),target=input(label(b,"Duração deste bloco (s)"),"labTarget","number",60,10,1200,1);
+ const wpm=input(label(b,"Ritmo deste bloco (palavras/min)"),"labWpm","number",120,10,1000,1);
+ button(b,"labResetBlock","Restaurar bloco",()=>{lab.targets[words[index].bi]=blocks[words[index].bi].seconds;sync();store()});
+ button(b,"labResetAll","Restaurar ritmos",()=>{lab.targets=blocks.map(x=>x.seconds);lab.rate=1;sync();store()});
+ const c=bar(),ctx=check(c,"labContext","Contexto com mesmas pistas"),gloss=check(c,"labGloss","Pistas de sentido"),adaptive=check(c,"labAdaptive","Dificuldade adaptativa no desafio");
+ const stats=put(tools,"div");stats.id="labStats";
+ const times=put(tools,"p");times.id="labTimes";times.className="muted";
+ const timing=put(tools,"details");put(timing,"summary","Tempos planejados por fala");
+ const tableHolder=put(timing,"div");tableHolder.id="labProfileTable";
+ const timeline=input(tools,"labTimeline","range",0,0,words.length-1,1);timeline.setAttribute("aria-label","Navegar por palavra no discurso");
+ const actions=bar();
+ button(actions,"labWeak","Próxima palavra difícil",()=>{const entries=Object.entries(lab.history).filter(([k,v])=>v.miss+v.hard>0).sort((a,b)=>(b[1].miss*2+b[1].hard-b[1].ok)-(a[1].miss*2+a[1].hard-a[1].ok));if(!entries.length){status.textContent="Ainda não há palavras marcadas como difíceis.";return}const hit=entries.find(([k])=>+k!==index)||entries[0];seek(+hit[0]);status.textContent="Revisão direcionada: palavra "+(+hit[0]+1)});
+ button(actions,"labCsv","Exportar ritmos CSV",exportTimings);
+ button(actions,"labResetGame","Zerar estatísticas do desafio",()=>{if(!confirm("Zerar apenas os resultados do laboratório? O texto, os ritmos e a memorização anterior serão preservados."))return;for(const k of ["xp","streak","bestStreak","correct","attempts","selfKnown","selfHard","selfMiss"])lab[k]=0;lab.history={};store();sync()});
+ const keys=put(tools,"details");put(keys,"summary","Atalhos de teclado");
+ put(keys,"p","Espaço: iniciar/pausar · ←/→: palavra · Shift+←/→: bloco · ↑/↓: velocidade · Home/End: início/fim do bloco · R: reiniciar bloco · M: trocar pista · H: revelar · L: repetir · F: foco · 1: acertei · 2: difícil · 3: errei · Esc: sair do foco/pausar.");
+ const status=put(tools,"p");status.id="labStatus";status.className="coach";status.setAttribute("role","status");
+ $("run").insertBefore(tools,$("progress"));
+ const stageActions=el("div");stageActions.className="bar";stageActions.id="labStageActions";
+ $("gloss").after(stageActions);
+ button(stageActions,"labReveal","Revelar / ocultar (H)",()=>{revealed=revealed===index?-1:index;renderWord()});
+ button(stageActions,"labKnown","Acertei (1)",()=>mark("ok"));
+ button(stageActions,"labHard","Difícil (2)",()=>mark("hard"));
+ button(stageActions,"labMiss","Errei (3)",()=>mark("miss"));
+ const quiz=el("form");quiz.id="labQuiz";quiz.hidden=true;
+ const quizLabel=label(quiz,"Qual é a palavra exata? ");
+ const answer=input(quizLabel,"labAnswer","text","");answer.autocomplete="off";answer.spellcheck=false;
+ const submit=put(quiz,"button","Conferir (Enter)");submit.type="submit";submit.className="primary";
+ const qnext=button(quiz,"labQuizNext","Próxima",()=>seek(index+1));
+ const feedback=put(quiz,"p");feedback.setAttribute("role","status");
+ stageActions.after(quiz);
+ function rateFor(bi){return lab.rate*blocks[bi].seconds/lab.targets[bi]}
+ function adjusted(t){let s=0;for(let i=0;i<blocks.length;i++){const b=blocks[i];s+=clamp(t-b.start,0,b.seconds)/rateFor(i)}return s}
+ function mask(s,i,chosen=lab.mode){
+  if(chosen==="full")return s;
+  const ar=Array.from(s),ids=ar.map((ch,j)=>/[\p{L}\p{N}]/u.test(ch)?j:-1).filter(j=>j>=0);
+  const n=ids.length;if(!n)return s;
+  const visible=Math.max(1,Math.ceil(n*(100-lab.amount)/100));
+  if(chosen==="cloze"&&((i*73+19)%100)>=lab.amount)return s;
+  if(chosen==="quiz")chosen=lab.autoLevel?(lab.streak>=7?"blind":lab.streak>=3?"initial":"prefix"):"initial";
+  return ar.map((ch,j)=>{const rank=ids.indexOf(j);if(rank<0)return ch;
+   let keep=false;
+   if(chosen==="initial")keep=rank===0;
+   else if(chosen==="prefix")keep=rank<visible;
+   else if(chosen==="suffix")keep=rank>=n-visible;
+   else if(chosen==="skeleton")keep=/[\p{L}]/u.test(ch)&&!/[aeiou]/i.test(fold(ch));
+   else if(chosen==="cloze")keep=false;
+   return keep?ch:"·";
+  }).join("");
+ }
+ function sync(){
+  mode.value=lab.mode;speed.value=lab.rate;amount.value=lab.amount;amountLabel.textContent=lab.amount+"%";
+  ctx.checked=lab.context;gloss.checked=lab.gloss;adaptive.checked=lab.autoLevel;
+  const bi=words[index].bi,block=blocks[bi];target.value=Math.round(lab.targets[bi]*10)/10;wpm.value=Math.round(block.count*60/lab.targets[bi]);
+  $("loop").checked=lab.loop;
+  stats.replaceChildren();
+  for(const v of ["XP "+lab.xp,"Sequência "+lab.streak+" · recorde "+lab.bestStreak,"Desafio literal "+lab.correct+"/"+lab.attempts+(lab.attempts?" ("+Math.round(lab.correct/lab.attempts*100)+"%)":""),"Autoavaliação "+lab.selfKnown+" / "+lab.selfHard+" / "+lab.selfMiss])put(stats,"span",v);
+  tableHolder.replaceChildren();const rows=makeTable(tableHolder,["Fala","Original","Personalizado (1×)","Ritmo efetivo"]);
+  blocks.forEach((b,i)=>addRow(rows,[(i+1)+" · "+b.title,stamp(b.seconds),stamp(lab.targets[i],1),Math.round(b.count*60/lab.targets[i]*lab.rate)+" ppm"]));
+  addRow(rows,["Total",stamp(total),stamp(lab.targets.reduce((a,b)=>a+b,0),1),Math.round(words.length*60/adjusted(total))+" ppm"]);
+  renderWord();renderClock();
+ }
+ function setMode(v){pause();lab.mode=v;revealed=-1;quizIndex=-1;$("hide").checked=false;store();sync();if(v==="quiz")answer.focus()}
+ function changeRate(v){lab.rate=num(v,lab.rate,.25,3);store();sync()}
+ mode.onchange=()=>setMode(mode.value);speed.onchange=()=>changeRate(speed.value);
+ amount.oninput=()=>{lab.amount=+amount.value;amountLabel.textContent=lab.amount+"%";store();renderWord()};
+ target.onchange=()=>{lab.targets[words[index].bi]=num(target.value,blocks[words[index].bi].seconds,10,1200);store();sync()};
+ wpm.onchange=()=>{const bi=words[index].bi;lab.targets[bi]=clamp(blocks[bi].count*60/num(wpm.value,120,10,1000),10,1200);store();sync()};
+ ctx.onchange=()=>{lab.context=ctx.checked;store();renderWord()};
+ gloss.onchange=()=>{lab.gloss=gloss.checked;store();renderWord()};
+ adaptive.onchange=()=>{lab.autoLevel=adaptive.checked;store();renderWord()};
+ $("loop").onchange=()=>{lab.loop=$("loop").checked;store()};
+ timeline.oninput=()=>seek(+timeline.value);
+ const legacyRate=$("rate");
+ legacyRate.closest("label").hidden=true;legacyRate.onchange=()=>changeRate(legacyRate.value);
+ function record(kind,typed){
+  const h=lab.history[index]||(lab.history[index]={ok:0,miss:0,hard:0});h[kind]++;
+  if(typed){lab.attempts++;if(kind==="ok"){lab.correct++;lab.streak++;lab.bestStreak=Math.max(lab.bestStreak,lab.streak);lab.xp+=10+Math.min(10,lab.streak-1)}else{lab.streak=0;lab.xp+=2}}
+  else{if(kind==="ok")lab.selfKnown++;if(kind==="hard")lab.selfHard++;if(kind==="miss")lab.selfMiss++}
+  store();
+ }
+ function mark(kind){if(lab.mode==="quiz"||soloStart!==null)return;record(kind,false);status.textContent="Autoavaliação registrada na palavra "+(index+1)+": "+({ok:"acertei",hard:"difícil",miss:"errei"}[kind]);if(!running&&index<words.length-1)seek(index+1);sync()}
+ quiz.onsubmit=e=>{e.preventDefault();if(quizAnswered)return;const expected=words[index].word.normalize("NFC");const response=answer.value.trim().normalize("NFC");if(!response)return;const ok=response===expected;record(ok?"ok":"miss",true);quizAnswered=true;feedback.textContent=(ok?"Correto. ":"Resposta esperada: "+expected+". ")+"XP "+lab.xp+" · sequência "+lab.streak;revealed=index;sync();qnext.focus()};
+ renderBlock=function(bi){oldBlock(bi);if(target){target.value=lab.targets[bi];wpm.value=Math.round(blocks[bi].count*60/lab.targets[bi])}};
+ let priorContextMode="",priorBlock=-1;
+ renderWord=function(){
+  oldRender();const w=words[index],b=blocks[w.bi];timeline.value=index;
+  target.value=document.activeElement===target?target.value:Math.round(lab.targets[w.bi]*10)/10;
+  wpm.value=document.activeElement===wpm?wpm.value:Math.round(b.count*60/lab.targets[w.bi]);
+  const hidden=$("hide").checked||soloStart!==null;const chosen=hidden?"blind":lab.mode;
+  $("current").textContent=hidden?"•••":revealed===index?w.word:mask(w.word,index,chosen);
+  $("gloss").textContent=!hidden&&(lab.gloss||chosen==="full")&&w.gloss?"Pista de sentido · "+w.gloss:"";
+  $("reading").hidden=hidden||!lab.context||chosen==="quiz"||chosen==="blind";
+  const contextKey=chosen+"|"+lab.amount+"|"+lab.autoLevel;
+  if(priorBlock!==w.bi||priorContextMode!==contextKey){for(let i=b.first;i<=b.last;i++){const btn=$("token"+i);if(btn){btn.textContent=mask(words[i].word,i,chosen);btn.setAttribute("aria-label","Palavra "+(i+1))}}priorBlock=w.bi;priorContextMode=contextKey}
+  quiz.hidden=hidden||chosen!=="quiz";
+  stageActions.hidden=hidden;
+  for(const id of ["labKnown","labHard","labMiss"])$(id).hidden=chosen==="quiz";
+  if(quizIndex!==index){quizIndex=index;quizAnswered=false;answer.value="";feedback.textContent="";revealed=-1}
+  answer.disabled=quizAnswered;submit.disabled=quizAnswered;qnext.disabled=index===words.length-1;
+ };
+ $("hide").onchange=()=>{revealed=-1;renderWord()};
+ renderClock=function(){oldClock();const bi=words[index].bi;times.textContent="Ritmo efetivo "+Math.round(blocks[bi].count*60/lab.targets[bi]*lab.rate)+" ppm · Tempo ajustado "+stamp(adjusted(cursor),1)+" / "+stamp(adjusted(total),1)+" · "+(adjusted(total)<=600?"Margem "+stamp(600-adjusted(total),1):"Excesso "+stamp(adjusted(total)-600,1))};
+ // Advance in original-time coordinates while integrating each block's individual rate.
+ frame=function(now){
+  if(!running)return;
+  let remaining=Math.max(0,(now-lastFrame)/1000);lastFrame=now;
+  const loopBi=words[index].bi;
+  while(remaining>1e-7&&cursor<total){
+   const bi=lab.loop?loopBi:words[positionAt(cursor)].bi,b=blocks[bi],end=b.start+b.seconds,r=rateFor(bi);
+   const until=Math.max(0,(end-cursor)/r);
+   if(remaining<until){cursor+=remaining*r;remaining=0}
+   else{remaining-=until;cursor=end;if(lab.loop){cursor=b.start;remaining%=lab.targets[bi]/lab.rate}else if(cursor>=total)break;else if(until===0){cursor=Math.min(total,cursor+1e-8)}}
+  }
+  cursor=Math.min(cursor,total);const next=positionAt(cursor);
+  if(next!==index){index=next;revealed=-1;renderWord()}renderClock();
+  if(cursor>=total)pause();else raf=requestAnimationFrame(frame);
+ };
+ const oldToggle=toggle;
+ toggle=function(){if(lab.mode==="quiz"&&!$("hide").checked){if(!quizAnswered){answer.focus();status.textContent="Conferir a palavra antes de avançar (ou usar a seta direita)."}else if(index<words.length-1){seek(index+1);answer.focus()}return}oldToggle()};
+ $("play").onclick=toggle;
+ document.addEventListener("visibilitychange",()=>{if(document.hidden&&running)pause()});
+ document.addEventListener("keydown",e=>{
+  if(view!=="run"||e.ctrlKey||e.metaKey||e.altKey||e.target.closest("input,textarea,select,[contenteditable=true]"))return;
+  const bi=words[index].bi;
+  const map={" ":()=>toggle(),ArrowLeft:()=>seek(e.shiftKey?blocks[Math.max(0,bi-1)].first:index-1),ArrowRight:()=>seek(e.shiftKey?blocks[Math.min(blocks.length-1,bi+1)].first:index+1),ArrowUp:()=>changeRate(lab.rate+.05),ArrowDown:()=>changeRate(lab.rate-.05),Home:()=>seek(blocks[bi].first),End:()=>seek(blocks[bi].last),r:()=>seek(blocks[bi].first),m:()=>setMode(modes[(modes.findIndex(x=>x[0]===lab.mode)+1)%modes.length][0]),h:()=>$("labReveal").click(),l:()=>{lab.loop=!lab.loop;store();sync()},f:()=>setFocus(!document.body.hasAttribute("data-focus")),1:()=>mark("ok"),2:()=>mark("hard"),3:()=>mark("miss"),Escape:()=>{pause();setFocus(false)}};
+  const action=map[e.key.length===1?e.key.toLowerCase():e.key];if(!action)return;
+  if(e.key===" "&&e.target.closest("button,summary,a"))return;
+  e.preventDefault();e.stopImmediatePropagation();if(soloStart!==null&&e.key!=="Escape")return;action();
+ },true);
+ function downloadLab(name,content,type){const href=URL.createObjectURL(new Blob([content],{type}));const a=el("a");a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1500)}
+ function exportTimings(){const rows=[["palavra_global","bloco","palavra","inicio_original_s","fim_original_s","inicio_ajustado_s","fim_ajustado_s","ritmo_global","duracao_bloco_personalizada_s"]];words.forEach((w,i)=>rows.push([i+1,w.bi+1,w.word,w.start.toFixed(3),w.end.toFixed(3),adjusted(w.start).toFixed(3),adjusted(w.end).toFixed(3),lab.rate,lab.targets[w.bi]]));downloadLab("ritmos-personalizados.csv","\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(";")).join("\r\n"),"text/csv;charset=utf-8")}
+ backup.textContent="Exportar progresso + ritmos + desafios";
+ backup.onclick=()=>{store();downloadLab("progresso-arguicao-v2.json",JSON.stringify({format:storageKey,...saved},null,2),"application/json")};
+ restore.textContent="Importar progresso e configurações";
+ const legacyImport=upload.onchange;
+ upload.onchange=async()=>{const file=upload.files[0];if(!file)return;let data;try{if(file.size>250000)throw Error();data=JSON.parse(await file.text());if(data.format!==storageKey)throw Error()}catch{transferStatus.textContent="Arquivo de progresso inválido.";upload.value="";return}
+  await legacyImport();if(data.readerLab){lab=sanitize(data.readerLab);store();sync();transferStatus.textContent="Progresso anterior preservado; ritmos, modos e estatísticas do laboratório importados."}
+ };
+ store();sync();
+})();
+
 </script>
