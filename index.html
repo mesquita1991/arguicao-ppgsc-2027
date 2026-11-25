@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ensaio de arguição · PPGSC UFPB</title>
+<style>
+:root{color-scheme:dark;--bg:#0b151a;--panel:#132329;--ink:#f2f7f6;--muted:#adc4c2;--accent:#a7efce;--line:#345056;--gold:#ffdf9b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:clamp(14px,4vw,48px)}h1,h2,h3,p{margin:0 0 .55em}h1{font:clamp(2.3rem,6vw,4.4rem)/1.04 Georgia,serif;letter-spacing:-.045em}header{margin-bottom:1.65rem}.eyebrow{color:var(--accent);letter-spacing:.11em;font-size:.8rem;font-weight:700}.muted,small{color:var(--muted)}nav,.bar,.stats{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;margin:.8rem 0}.stats>span{border:1px solid var(--line);border-radius:2rem;padding:.3rem .8rem}button,input,select,textarea{font:inherit;color:inherit;background:#192f36;border:1px solid var(--line);border-radius:.55rem;padding:.45rem .7rem}button{cursor:pointer}button:hover{border-color:var(--accent)}button[aria-pressed=true],.primary{background:var(--accent);color:#102720;font-weight:750}button:disabled{opacity:.45;cursor:default}:focus-visible{outline:2px solid var(--gold);outline-offset:3px}.grid{display:grid;grid-template-columns:minmax(205px,1fr) minmax(0,3.4fr);gap:1rem}.panel{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:clamp(12px,2.2vw,25px)}aside button{display:block;width:100%;text-align:left;margin:.4rem 0}aside button small,aside button strong{display:block}aside button[aria-pressed=true] small{color:#244137}.stage{background:#0d1b21;border-radius:.8rem;padding:1.15rem;margin:.9rem 0;min-height:130px}.current{color:var(--accent);font:clamp(1.9rem,7vw,4rem)/1.15 Georgia,serif;overflow-wrap:anywhere}.reading{line-height:2.0;max-height:16rem;overflow:auto;padding:.25rem}.word{border:0;background:none;padding:.04em .15em;border-radius:.25em}.word.active{background:var(--accent);color:#102720}.word.transition{border-bottom:1px dotted var(--gold)}progress{width:100%;accent-color:var(--accent)}.scroll{overflow:auto;max-height:65vh}table{width:100%;border-collapse:collapse;text-align:left;font-variant-numeric:tabular-nums}td,th{padding:.52rem .62rem;border-bottom:1px solid var(--line)}th{position:sticky;top:0;background:#192f36}textarea{display:block;width:100%;min-height:155px}input[type=number]{width:6rem}.wrong{color:var(--gold)}.correct{color:var(--accent)}.support{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.support article{border:1px solid var(--line);border-radius:.7rem;padding:.85rem}details{margin-top:1.1rem}summary{cursor:pointer;color:var(--accent)}[hidden]{display:none!important}@media(max-width:670px){.grid{grid-template-columns:1fr}aside #blocks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem}aside button{margin:0}button,input,select{max-width:100%}}
+body{background:radial-gradient(ellipse at top right,#17383b 0,transparent 48%),var(--bg)}
+nav{position:sticky;top:0;z-index:2;background:var(--panel);padding:.6rem 0;border-bottom:1px solid var(--line)}
+.stage{min-height:175px;display:grid;align-content:center;text-align:center;border:1px solid var(--line)}
+.reading{background:#0e1e24;border:1px solid var(--line);border-radius:.7rem;padding:.55rem}
+button{min-height:38px}.word{min-height:unset}.panel{min-width:0}
+body[data-focus] aside,body[data-focus] header,body[data-focus] #reading,body[data-focus] #jump{display:none}
+body[data-focus] .grid{grid-template-columns:1fr}body[data-focus] .stage{min-height:38vh}
+.elapsed{font-variant-numeric:tabular-nums}.coach{color:var(--gold);min-height:1.55em}
+@media(max-width:670px){nav{gap:.3rem}nav button{flex:1;padding:.4rem;font-size:.9rem}.stats{font-size:.875rem}.stage{min-height:140px}}
+</style>
+<main><header><p class="eyebrow">PPGSC · UFPB 2027</p><h1>Ensaio de arguição</h1><div class="stats" id="totals"></div><p class="muted">Discurso integral com navegação por palavra, treino de evocação e conferência literal.</p></header>
+<div class="grid"><aside class="panel"><h2>Blocos</h2><div id="blocks"></div><p class="muted" id="master"></p></aside>
+<section class="panel"><nav aria-label="Módulos">
+<button data-view="run" aria-pressed="true">Ensaio</button><button data-view="recall" aria-pressed="false">Memorização</button><button data-view="support" aria-pressed="false">Apoios</button><button data-view="data" aria-pressed="false">Tabela</button></nav>
+<div id="run"><h2 id="blockTitle"></h2><div class="bar">
+<button id="prev" aria-label="Palavra anterior">←</button><button id="play" class="primary">Iniciar</button><button id="next" aria-label="Próxima palavra">→</button><button id="restart">Reiniciar bloco</button>
+<label>Velocidade <select id="rate"><option>.75</option><option selected>1</option><option>1.15</option><option>1.25</option><option>1.5</option></select>×</label><label><input id="loop" type="checkbox"> Repetir bloco</label><label><input id="hide" type="checkbox"> Ocultar palavras</label></div>
+<progress id="progress" aria-label="Progresso no discurso"></progress><div class="muted elapsed" id="clock"></div>
+<div class="bar"><button id="focusMode" aria-pressed="false">Modo foco</button><button id="solo">Cronometrar minha fala</button><button id="lap" hidden>Marcar fim do bloco</button><button id="stopSolo" hidden>Encerrar</button></div><div id="soloResult" class="coach" role="status"></div>
+<div class="stage"><div class="muted" id="wordInfo"></div><div class="current" id="current"></div><div id="gloss"></div></div>
+<form class="bar" id="jump"><label>Ir à palavra <input type="number" id="wordNumber" min="1" required></label><button>Ir</button><label>Checkpoint <select id="checkpoint"></select></label></form>
+<div id="reading" class="reading" aria-label="Texto do bloco"></div><p class="muted"><small>Atalhos no ensaio: Espaço inicia ou pausa. ← e → navegam palavra por palavra.</small></p>
+</div>
+<div id="recall" hidden><h2>Evocação literal</h2><div class="bar"><label>Trecho <select id="scope"><option value="block">Bloco selecionado</option><option value="all">Discurso completo</option></select></label><button id="cue">Mostrar iniciais</button><button id="peek">Revelar próxima palavra</button></div><p class="muted" id="recallInfo"></p><details id="cueBox" hidden><summary>Iniciais por frase</summary><p id="cueText"></p></details><p id="hint"></p><label for="answer">Escreva o trecho de memória, com acentos e pontuação</label><textarea id="answer" spellcheck="false" autocomplete="off"></textarea><div class="bar"><button id="check" class="primary">Conferir texto</button><button id="clear">Limpar tentativa</button></div><div id="score" role="status"></div><div class="scroll" id="diff"></div></div>
+<div id="support" hidden><h2>Roteiro de apoio</h2><p class="muted">Use as pistas para recuperar a fala. A transição exibida abaixo pertence ao roteiro literal.</p><div class="support" id="cards"></div><details><summary>Dados e distinções a memorizar</summary><div id="facts"></div></details><details><summary>Mapa da lógica do anexo</summary><div id="logic"></div></details></div>
+<div id="data" hidden><h2>Checkpoints e tempos</h2><div class="scroll" id="summary"></div><h3>Índice palavra por palavra</h3><div class="bar"><label>Escopo <select id="filterBlock"><option value="all">Todos os blocos</option></select></label><label>Buscar palavra ou nº <input id="filter" type="search"></label><button id="csv">Exportar CSV filtrado</button></div><p class="muted" id="count"></p><div class="scroll"><table><thead><tr><th>Nº global</th><th>Bloco · nº local</th><th>Palavra</th><th>Início</th><th>Fim</th><th>No bloco</th><th>Checkpoint / tipo</th><th>Apoio</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<details><summary>Fonte e regra de cronometragem</summary><p>Fonte: Texto colado(9).txt, “Apresentação oral definitiva · 8 blocos”. A fala preserva grafia, números e pontuação. As quebras de linha e os cabeçalhos de impressão foram retirados. As sete transições foram incluídas no final dos respectivos blocos.</p><p>O índice conta unidades separadas por espaço. Siglas, termos hifenizados e números contam como uma unidade escrita. Para distribuir o tempo dentro de cada bloco, o cálculo atribui pesos ao comprimento das palavras, à expansão oral estimada de números e siglas e às pausas de pontuação. Os intervalos são estimativas para ensaio. Os limites de cada bloco seguem o anexo.</p><p>Os tempos exibidos são os do roteiro em 1×. O relógio de ensaio avança conforme a velocidade selecionada. As tentativas e os blocos acertados ficam no navegador quando o armazenamento local está disponível.</p></details></section></div></main>
+<script type="application/json" id="source">[{"title":"Apresentação e origem do projeto","seconds":75,"key":"Percurso acadêmico e vínculo direto com a pergunta · Pré-projeto: pp. 1–2","body":"Boa tarde. Agradeço à banca e ao Programa de Pós-Graduação em Saúde Coletiva da UFPB. Meu nome é Vinicius Pereira de Mesquita. Sou médico formado pela Universidade Federal do Maranhão, em 2017, e especialista em Saúde Mental e Atenção Psicossocial pela Universidade Estácio de Sá, em 2019. Na prática clínica, tenho experiência com a prescrição e o acompanhamento de pacientes que utilizam cannabis medicinal. Essa trajetória motivou uma pergunta que vai além da melhora dos sintomas: o que acontece com o tratamento e com a busca por cuidado quando os pacientes relatam manifestações indesejadas? A partir dessa questão, proponho o estudo intitulado “Repercussões terapêuticas e assistenciais de eventos adversos relatados no episódio mais recente de uso de cannabis medicinal para dor crônica em adultos com fibromialgia”.","transition":"Inicio contextualizando a dor crônica e o recorte clínico da fibromialgia."},{"title":"Contexto: dor crônica e fibromialgia","seconds":65,"key":"Prevalência não é prevalência de fibromialgia; dor nociplástica · Pré-projeto: pp. 2","body":"A dor crônica, definida no projeto pela persistência por mais de três meses, afeta funcionalidade e qualidade de vida. Santiago e colaboradores, em revisão sistemática e metanálise, estimaram prevalência combinada de 35,70% entre adultos brasileiros, com heterogeneidade elevada entre os estudos. Trata-se de dor crônica em geral, não de prevalência de fibromialgia. Na fibromialgia, a dor generalizada costuma coexistir com fadiga, sono não reparador, dificuldades cognitivas e sintomas emocionais. O PCDT do Ministério da Saúde reconhece o componente nociplástico, sem excluir a coexistência de outros mecanismos. A combinação de mecanismos, sintomas e condições de vida torna particularmente importante compreender o que já existia antes do uso de cada tratamento.","transition":"Esse quadro explica a necessidade de manejo individualizado e a pertinência de estudar tolerabilidade."},{"title":"Manejo, cannabis e evidências disponíveis","seconds":75,"key":"Cinco desafios condensados; evidência e segurança sem endosso terapêutico · Pré-projeto: pp. 2–3","body":"O cuidado na fibromialgia enfrenta cinco desafios interligados: mecanismos de dor complexos; sintomas variados; respostas terapêuticas heterogêneas; necessidade de decisões compartilhadas; e monitoramento da segurança. A EULAR destaca exercício físico e abordagem individualizada, sem oferecer respaldo específico à cannabis nessa diretriz. Quando o controle permanece insatisfatório, alguns pacientes utilizam produtos com diferentes concentrações de CBD e THC, doses e vias de administração. As revisões de Strand e Lopera apontam evidências limitadas e heterogêneas e descrevem manifestações indesejadas e interrupções do uso. No registro britânico de Varadpande, 227 de 497 participantes, ou 45,67%, relataram ao menos um evento adverso. Esse percentual não corresponde ao número de pessoas que alteraram o tratamento: é essa distinção que conduz à minha pergunta.","transition":"Passo da frequência de manifestações à repercussão concreta para o cuidado."},{"title":"Lacuna, pergunta e objetivos","seconds":65,"key":"Pergunta do pré-projeto e desfecho composto por pessoa · Pré-projeto: pp. 3–5","body":"A lacuna não é afirmar que ninguém estudou interrupção: isso já aparece na literatura. O interesse é medir conjuntamente, em um ambulatório brasileiro, as repercussões terapêuticas e assistenciais referidas por usuários atuais e anteriores. Minha pergunta é: qual a proporção de adultos com fibromialgia atendidos em consultório ambulatorial de João Pessoa que, no episódio mais recente de uso efetivo de cannabis medicinal para dor crônica, relatam ao menos uma manifestação indesejada nova ou agravada que motivou redução de dose, suspensão, interrupção do uso ou procura não programada de atendimento? O objetivo geral é estimar essa proporção. Os específicos caracterizam participantes e exposição, descrevem manifestações, decisões e atendimento, e fundamentam uma proposta preliminar de ficha de acompanhamento.","transition":"Para responder sem transformar relato em causalidade, delimitei o desenho e o episódio."},{"title":"Delineamento, população e episódio","seconds":80,"key":"Transversal, uso efetivo, recência e regra operacional de 30 dias · Pré-projeto: pp. 5–7","body":"Será um estudo epidemiológico observacional, quantitativo, transversal e descritivo-analítico, com entrevista única e recuperação retrospectiva de informações. O campo principal será um consultório privado de João Pessoa. Serão elegíveis adultos com fibromialgia clinicamente documentada, dor crônica e utilização efetiva, atual ou anterior, de cannabis por via oral ou oromucosa para tratar a dor. Prescrição isolada não comprova uso, e não haverá duração mínima obrigatória. O episódio é a sequência mais recente de utilização, em curso ou encerrada, incluindo pausas inferiores a 30 dias; 30 dias consecutivos ou mais sem uso delimitam episódios diferentes por convenção operacional, não por alegação farmacológica. A unidade do desfecho é a pessoa: mesmo com múltiplas manifestações ou condutas, cada participante positivo é contado apenas uma vez.","transition":"A entrevista foi organizada para separar manifestação, repercussão e incerteza."},{"title":"Coleta e classificação do desfecho","seconds":75,"key":"Sintomas prévios; pergunta aberta; classificação; GAD-7 atual · Pré-projeto: pp. 6–8","body":"O instrumento terá módulos de elegibilidade, características do produto, dose e duração, sintomas habituais anteriores ao episódio, manifestações novas ou agravadas e medidas adotadas. Uma pergunta aberta antecederá uma lista padronizada; para cada manifestação serão investigadas cronologia, intensidade, gravidade e a decisão que, segundo o participante, ela motivou. Os quatro grupos serão: sem manifestação; manifestação sem repercussão; manifestação que motivou uma das medidas definidas; e informação indeterminada. Apenas o terceiro representa positivo no desfecho principal; os dois primeiros são negativos classificáveis. Intensidade subjetiva não se confunde com gravidade regulatória, e associação temporal não comprova causalidade. O GAD-7 caracterizará ansiedade atual, nas duas semanas anteriores à entrevista, sem reconstruir retrospectivamente a ansiedade de episódios antigos.","transition":"A análise preservará o denominador correto e as incertezas de recrutamento e memória."},{"title":"Viabilidade, estatística e limites","seconds":75,"key":"1.297/128/81 são triagem; 60 é meta; positivos/(positivos+negativos) · Pré-projeto: pp. 8–10","body":"A amostragem será não probabilística, com recrutamento consecutivo e consulta a registros apenas quando autorizada. O levantamento exploratório encontrou 1.297 respostas de pré-consulta, 128 nomes com menção à fibromialgia e 81 com referência textual à cannabis. Isso não significa 81 pessoas elegíveis ou usuárias confirmadas. A meta de 60 entrevistas em até 12 meses é operacional. A proporção principal será calculada como positivos divididos por positivos mais negativos classificáveis; os indeterminados serão informados separadamente e analisados em cenários extremos. Apresentarei frequências, intervalos binomiais de 95% quando pertinentes e análise de sensibilidade para uso nos 12 meses anteriores à entrevista. A interpretação reconhecerá seleção não probabilística, recordação retrospectiva, sintomas prévios e ausência de comprovação causal ou representatividade populacional.","transition":"A conclusão depende igualmente do compromisso ético e do alcance real da contribuição."},{"title":"Ética, contribuição e encerramento","seconds":65,"key":"CEP; utilidade descritiva local; ficha a validar depois · Pré-projeto: pp. 4, 10–11","body":"Antes de novos acessos identificáveis, contatos ou entrevistas, serão necessárias anuência institucional, autorização do controlador dos registros e aprovação ética, com consentimento dos participantes. A experiência clínica não dispensa essas exigências. Os resultados esperados são descritivos: estimar repercussões relatadas, caracterizar decisões e necessidades de acompanhamento e propor uma ficha mínima, ainda não validada. A contribuição à Saúde Coletiva está na avaliação da segurança do cuidado, no apoio futuro a práticas assistenciais e no ensino da farmacovigilância, em convergência com a linha de Epidemiologia e os temas de pesquisa do Programa. Não pretendo demonstrar eficácia nem causalidade farmacológica. Agradeço a atenção e fico à disposição para discutir as escolhas e limitações do projeto.","transition":""}]</script>
+<script>
+"use strict";
+const blocks=JSON.parse(document.getElementById("source").textContent);
+const $=id=>document.getElementById(id);
+const notes=[
+["Trajetória → prática → pergunta → título","UFMA/17 · UNESA/19 · cannabis · repercussões","4 Ps: Pessoa, Percurso, Prática, Pergunta. O título fecha o bloco."],
+["Definição → magnitude → perfil → mecanismos → sintomas prévios",">3 meses · 35,70% dor crônica · nociplástica","DMP: Duração, Magnitude, Perfil. Feche recuperando o que já existia antes do uso."],
+["Cinco desafios → EULAR → produtos → revisões → registro → distinção","M-S-R-D-M · CBD/THC · 227/497","Mecanismos, Sintomas, Respostas, Decisão, Monitoramento. Do registro, recupere evento adverso e depois a distinção sobre alteração do tratamento."],
+["Lacuna → cenário → pergunta → objetivo geral → específicos","episódio recente · nova/agravada · R-S-I-P · ficha","R-S-I-P: Redução, Suspensão, Interrupção, Procura não programada."],
+["Desenho → cenário → elegibilidade → episódio → pessoa","transversal · entrevista única · oral/oromucosa · ≥30 dias","D-C-E-E-P: Desenho, Campo, Elegibilidade, Episódio, Pessoa."],
+["Módulos → aberta/lista → quatro grupos → distinções → GAD-7","0 · sem repercussão · com repercussão · indeterminado","0–S–C–I: zero manifestação, sem repercussão, com repercussão, indeterminado."],
+["Amostragem → triagem → meta → cálculo → sensibilidade → limites","1.297 → 128 → 81 · 60/12 meses · P/(P+N)","Três números de triagem, uma meta. Depois diga quem entra no denominador e onde ficam os indeterminados."],
+["Autorizações → entregas → Saúde Coletiva → limites → agradecimento","anuência · controlador · CEP · consentimento · ficha","A-C-C-C: Anuência, Controlador, CEP, Consentimento. Feche com alcance, limites e agradecimento."]
+];
+const synonyms={
+agradeço:"sou grato",trajetória:"percurso",motivou:"levou a",pergunta:"questão",proponho:"apresento como proposta",repercussões:"consequências",terapêuticas:"relativas ao tratamento",assistenciais:"relativas ao cuidado",indesejadas:"não desejadas",persistência:"continuidade",funcionalidade:"capacidade funcional",combinada:"estimativa agregada dos estudos",heterogeneidade:"variabilidade",coexistir:"ocorrer ao mesmo tempo",nociplástico:"relativo à alteração da nocicepção",manejo:"condução do cuidado",tolerabilidade:"capacidade de tolerar o tratamento",interligados:"relacionados",variados:"diversos",heterogêneas:"variáveis",compartilhadas:"tomadas em conjunto",respaldo:"apoio",insatisfatório:"aquém do esperado",manifestações:"sinais ou sintomas referidos",lacuna:"ponto ainda a esclarecer",conjuntamente:"em conjunto",referidas:"relatadas",efetivo:"uso de fato",agravada:"piorada",suspensão:"pausa no uso",interrupção:"cessação do uso",preliminar:"inicial",delimitei:"defini os limites de",transversal:"com avaliação em um único momento",retrospectiva:"referente a informações passadas",elegíveis:"que atendem aos critérios",isolada:"por si só",delimitam:"separam",convenção:"regra adotada",habitual:"usual",habituais:"usuais",antecederá:"virá antes de",padronizada:"estruturada segundo um padrão",cronologia:"ordem temporal",indeterminada:"sem informação suficiente para classificar",classificáveis:"passíveis de classificação",subjetiva:"percebida pelo participante",causalidade:"relação de causa e efeito",caracterizará:"descreverá",denominador:"grupo de referência do cálculo",consecutivo:"em sequência",exploratório:"preliminar",triagem:"seleção inicial",operacional:"definido para executar o estudo",pertinentes:"aplicáveis",recordação:"memória",anuência:"concordância formal",identificáveis:"vinculáveis a uma pessoa",dispensa:"torna desnecessárias",descritivos:"voltados a descrever",convergência:"alinhamento",validada:"com validação demonstrada",farmacovigilância:"monitoramento da segurança de tratamentos",limitações:"restrições do estudo"
+};
+const facts=[
+["2017 · 2019","Formação UFMA e especialização UNESA."],["Mais de três meses","Definição operacional de dor crônica no projeto."],["35,70%","Prevalência combinada de dor crônica geral em adultos brasileiros, com heterogeneidade elevada."],["227/497 · 45,67%","Pelo menos um evento adverso no registro britânico."],["30 dias consecutivos ou mais","Intervalo sem uso que separa episódios."],["Quatro grupos · terceiro positivo","Sem manifestação, sem repercussão, com repercussão elegível, indeterminado."],["Duas semanas","Janela de ansiedade atual no GAD-7."],["1.297 → 128 → 81","Respostas de pré-consulta, menções à fibromialgia, referências textuais à cannabis. Contagens da triagem."],["60 entrevistas em até 12 meses","Meta operacional de recrutamento."],["P/(P+N) · 95%","Positivos sobre classificáveis e intervalos binomiais quando pertinentes."],["12 meses anteriores","Recorte da análise de sensibilidade."]
+];
+const oral={"2017":21,"2019":21,"35,70%":28,"227":17,"497":22,"45,67%":34,"30":6,"1.297":36,"128":20,"81":12,"60":8,"12":4,"95%":23,"GAD-7":10,"CBD":7,"THC":7,"UFPB":9,"PCDT":9,"EULAR":5};
+const clean=s=>s.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}%]+$/gu,"");
+const key=s=>clean(s).toLocaleLowerCase("pt-BR");
+const fold=s=>s.normalize("NFD").replace(/\p{M}/gu,"").toLowerCase();
+const split=s=>s.trim()?s.trim().split(/\s+/u):[];
+const words=[];
+let total=0;
+blocks.forEach((b,bi)=>{
+ b.start=total;b.first=words.length;
+ const body=split(b.body), list=[...body,...split(b.transition)];
+ const weights=list.map(w=>Math.sqrt(oral[clean(w)]||Math.max(1,clean(w).length))+(/[.!?][”"]?$/u.test(w)&&!/^\d/.test(w)?1.1:/[,;:]$/u.test(w)?.6:0));
+ const sum=weights.reduce((a,c)=>a+c,0);
+ let weight=0;
+ list.forEach((word,local)=>{
+  const start=total+b.seconds*weight/sum;
+  weight+=weights[local];
+  const end=local===list.length-1?total+b.seconds:total+b.seconds*weight/sum;
+  const transition=local>=body.length;
+  const sentence=local>0&&/[.!?][”"]?$/u.test(list[local-1]);
+  const mark=local===0?"Início do bloco":local===body.length?"Transição":sentence?"Início de frase":"";
+  words.push({word,bi,local,start,end,transition,mark,gloss:synonyms[key(word)]||""});
+ });
+ b.last=words.length-1;b.count=list.length;
+ total+=b.seconds;
+});
+const stamp=(seconds,precision=0)=>{
+ const factor=10**precision;
+ const ticks=Math.round(Math.max(0,seconds)*factor);
+ return String(Math.floor(ticks/(60*factor))).padStart(2,"0")+":"+String(Math.floor(ticks/factor)%60).padStart(2,"0")+(precision?","+String(ticks%factor).padStart(precision,"0"):"");
+};
+function el(tag,msg){const item=document.createElement(tag);if(msg!==undefined)item.textContent=msg;return item}
+function put(parent,tag,msg){const item=el(tag,msg);parent.append(item);return item}
+function linkWord(parent,label,i){const btn=put(parent,"button",label);btn.onclick=()=>{seek(i);show("run");$("current").scrollIntoView({block:"nearest"});};return btn}
+const storageKey="ufpb-arguicao-2027-v1";
+let saved={};
+try{saved=JSON.parse(localStorage.getItem(storageKey)||"{}")||{}}catch{}
+saved.best=saved.best||{};saved.answers=saved.answers||{};
+function save(){try{localStorage.setItem(storageKey,JSON.stringify(saved))}catch{}}
+let index=Math.min(words.length-1,Math.max(0,Number(saved.index)||0)),activeBlock=-1;
+let cursor=words[index].start, running=false,lastFrame=0,raf=0,view="run",openCue=false;
+const blockButtons=[];
+$("totals").innerHTML="<span><b>"+words.length+"</b> palavras escritas</span><span><b>"+blocks.length+"</b> blocos</span><span><b>"+stamp(total)+"</b> de fala</span><span><b>"+stamp(600-total)+"</b> de margem</span><span><b>"+words.filter(w=>w.mark).length+"</b> checkpoints</span>";
+$("progress").max=total;$("wordNumber").max=words.length;
+blocks.forEach((b,i)=>{
+ const btn=put($("blocks"),"button");put(btn,"strong",String(i+1).padStart(2,"0")+" · "+b.title);put(btn,"small",stamp(b.start)+"–"+stamp(b.start+b.seconds)+" · "+b.count+" palavras");
+ btn.onclick=()=>seek(b.first);blockButtons.push(btn);
+ const option=put($("filterBlock"),"option",(i+1)+" · "+b.title);option.value=i;
+});
+function refreshMaster(){
+ blockButtons.forEach((btn,i)=>{const b=blocks[i];btn.querySelector("small").textContent=stamp(b.start)+"–"+stamp(b.start+b.seconds)+" · "+b.count+" palavras"+(saved.best[i]===100?" · domínio literal":"")});
+ $("master").textContent=blocks.filter((_,i)=>saved.best[i]===100).length+"/"+blocks.length+" blocos acertados integralmente.";
+}
+function show(which){
+ if(which!=="run")pause();
+ view=which;
+ for(const btn of document.querySelectorAll("[data-view]")){
+  const selected=btn.dataset.view===which;btn.setAttribute("aria-pressed",selected);$(btn.dataset.view).hidden=!selected;
+ }
+ if(which==="data")drawRows();
+}
+document.querySelectorAll("[data-view]").forEach(btn=>btn.onclick=()=>show(btn.dataset.view));
+function renderBlock(bi){
+ activeBlock=bi;
+ const b=blocks[bi];
+ blockButtons.forEach((btn,i)=>btn.setAttribute("aria-pressed",i===bi));
+ $("blockTitle").textContent=(bi+1)+". "+b.title;
+ $("reading").replaceChildren();
+ $("checkpoint").replaceChildren();
+ put($("checkpoint"),"option","Escolher marco").value="";
+ for(let i=b.first;i<=b.last;i++){
+  const w=words[i], btn=put($("reading"),"button",w.word);
+  btn.id="token"+i;btn.className=w.transition?"word transition":"word";btn.onclick=()=>seek(i);
+  if(w.mark)put($("checkpoint"),"option",stamp(w.start,1)+" · "+w.mark+" · "+w.word).value=i;
+ }
+ renderRecall();
+}
+function renderWord(){
+ const w=words[index],b=blocks[w.bi];
+ if(w.bi!==activeBlock)renderBlock(w.bi);
+ $("wordInfo").textContent="Palavra "+(index+1)+"/"+words.length+" · "+(w.local+1)+"/"+b.count+" no bloco · "+stamp(w.start,2)+"–"+stamp(w.end,2)+(w.mark?" · "+w.mark:"");
+ $("current").textContent=$("hide").checked?"•••":w.word;
+ $("gloss").textContent=!$("hide").checked&&w.gloss?"Pista de sentido · "+w.gloss:"";
+ $("reading").hidden=$("hide").checked;
+ $("reading").querySelector(".active")?.classList.remove("active");
+ const btn=$("token"+index);
+ btn.classList.add("active");
+ if(!$(view).hidden&&view==="run"&&!$("hide").checked){
+  const reader=$("reading"),top=btn.getBoundingClientRect().top-reader.getBoundingClientRect().top;
+  if(top<0||top+btn.offsetHeight>reader.clientHeight)reader.scrollTop+=top-reader.clientHeight/3;
+ }
+ $("prev").disabled=index===0;$("next").disabled=index===words.length-1;
+}
+function renderClock(){
+ const b=blocks[words[index].bi];$("progress").value=cursor;
+ $("clock").textContent=stamp(cursor,1)+" / "+stamp(total)+" · bloco "+stamp(cursor-b.start,1)+" / "+stamp(b.seconds)+(cursor>=total?" · fim do discurso":"");
+}
+function pause(){running=false;cancelAnimationFrame(raf);$("play").textContent=cursor>=total?"Recomeçar":"Iniciar";saved.index=index;save()}
+function seek(i){pause();index=Math.max(0,Math.min(words.length-1,i));cursor=words[index].start;renderWord();renderClock();saved.index=index;save()}
+function positionAt(time){
+ let low=0,high=words.length-1;
+ while(low<high){const mid=Math.ceil((low+high)/2);if(words[mid].start<=time)low=mid;else high=mid-1}
+ return low;
+}
+function frame(now){
+ if(!running)return;
+ const delta=Math.max(0,(now-lastFrame)/1000)*Number($("rate").value);lastFrame=now;
+ const b=blocks[words[index].bi];cursor+=delta;
+ if($("loop").checked&&cursor>=b.start+b.seconds)cursor=b.start+(cursor-b.start)%b.seconds;
+ cursor=Math.min(cursor,total);
+ const next=positionAt(cursor);
+ if(next!==index){index=next;renderWord()}
+ renderClock();
+ if(cursor>=total)pause();else raf=requestAnimationFrame(frame);
+}
+function toggle(){
+ if(running){pause();return}
+ if(cursor>=total)seek(0);
+ running=true;lastFrame=performance.now();$("play").textContent="Pausar";raf=requestAnimationFrame(frame);
+}
+$("play").onclick=toggle;
+$("prev").onclick=()=>seek(index-1);$("next").onclick=()=>seek(index+1);
+$("restart").onclick=()=>seek(blocks[words[index].bi].first);
+$("hide").onchange=renderWord;
+$("jump").onsubmit=e=>{e.preventDefault();seek(Number($("wordNumber").value)-1)};
+$("checkpoint").onchange=e=>{if(e.target.value!=="")seek(Number(e.target.value))};
+document.addEventListener("keydown",e=>{
+ if(view!=="run"||e.altKey||e.ctrlKey||e.metaKey||e.target.closest("input,textarea,select,button,summary,a"))return;
+ const actions={" ":toggle,ArrowLeft:()=>seek(index-1),ArrowRight:()=>seek(index+1)};
+ if(actions[e.key]){e.preventDefault();actions[e.key]()}
+});
+const scopeKey=()=>$("scope").value==="all"?"all":String(activeBlock);
+function expected(){
+ if(scopeKey()==="all")return words.map(w=>w.word);
+ const b=blocks[activeBlock];return words.slice(b.first,b.last+1).map(w=>w.word);
+}
+function renderRecall(){
+ const k=scopeKey(), list=expected();
+ $("answer").value=saved.answers[k]||"";$("score").replaceChildren();$("diff").replaceChildren();$("hint").textContent="";
+ $("recallInfo").textContent=(k==="all"?"Discurso completo":blocks[activeBlock].title)+" · "+list.length+" palavras"+(saved.best[k]!==undefined?" · melhor resultado "+saved.best[k]+"%":"");
+ $("cueBox").hidden=!openCue;
+ $("cueText").textContent=list.map(w=>clean(w)[0]+(w.match(/[.!?;:,][”"]?$/u)?.[0]||"")).join(" ");
+}
+$("scope").onchange=renderRecall;
+$("cue").onclick=()=>{openCue=!openCue;$("cueBox").hidden=!openCue;$("cueBox").open=openCue;$("cue").textContent=openCue?"Ocultar iniciais":"Mostrar iniciais"};
+$("answer").oninput=()=>{saved.answers[scopeKey()]=$("answer").value;save();$("score").replaceChildren();$("diff").replaceChildren();$("hint").textContent=""};
+$("clear").onclick=()=>{delete saved.answers[scopeKey()];save();renderRecall();$("answer").focus()};
+$("peek").onclick=()=>{
+ const list=expected(),typed=split($("answer").value.normalize("NFC"));
+ const mismatch=list.findIndex((w,i)=>w!==typed[i]);
+ $("hint").textContent=mismatch<0?"Todas as palavras esperadas estão no início da tentativa.":"Palavra "+(mismatch+1)+" · "+list[mismatch];
+};
+function alignment(target,typed){
+ const n=target.length,m=typed.length;
+ const matrix=Array.from({length:n+1},()=>new Uint32Array(m+1));
+ for(let i=0;i<=n;i++)matrix[i][0]=i;
+ for(let j=0;j<=m;j++)matrix[0][j]=j;
+ for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)matrix[i][j]=Math.min(matrix[i-1][j]+1,matrix[i][j-1]+1,matrix[i-1][j-1]+Number(target[i-1]!==typed[j-1]));
+ const edits=[];let i=n,j=m,correct=0;
+ while(i||j){
+  if(i&&j&&target[i-1]===typed[j-1]&&matrix[i][j]===matrix[i-1][j-1]){correct++;i--;j--;continue}
+  if(i&&j&&matrix[i][j]===matrix[i-1][j-1]+1){edits.push([i,target[--i],typed[--j],"Troca"]);continue}
+  if(i&&matrix[i][j]===matrix[i-1][j]+1){edits.push([i,target[--i],"","Omissão"]);continue}
+  edits.push([i,"",typed[--j],"Acréscimo"]);
+ }
+ return {edits:edits.reverse(),correct,distance:matrix[n][m]};
+}
+$("check").onclick=()=>{
+ const target=expected(),typed=split($("answer").value.normalize("NFC"));
+ if(typed.length>target.length+1500){$("score").textContent="A tentativa excede o tamanho máximo de comparação para este trecho.";return}
+ const result=alignment(target,typed),percent=Math.max(0,Math.floor(100*(1-result.distance/target.length)));
+ const k=scopeKey();saved.best[k]=Math.max(percent,saved.best[k]||0);
+ if(k==="all"&&percent===100)blocks.forEach((_,i)=>saved.best[i]=100);
+ save();refreshMaster();renderRecall();
+ $("score").textContent=percent+"% de fidelidade · "+result.correct+"/"+target.length+" palavras coincidentes · "+result.distance+" ajustes.";
+ const table=makeTable($("diff"),["Posição no trecho","Esperado","Digitado","Diferença"]);
+ for(const [i,word,typedWord,type] of result.edits)addRow(table,[type==="Acréscimo"?"Após "+i:i,word||"—",typedWord||"—",type]);
+ if(!result.edits.length)$("diff").replaceChildren(put(document.createDocumentFragment(),"p","Trecho reproduzido integralmente."));
+};
+function makeTable(container,headers){
+ const table=put(container,"table"), head=put(put(table,"thead"),"tr");
+ headers.forEach(h=>{put(head,"th",h).scope="col"});return put(table,"tbody");
+}
+function addRow(tbody,values){
+ const row=put(tbody,"tr");values.forEach(v=>put(row,"td",v));return row;
+}
+blocks.forEach((b,i)=>{
+ const card=put($("cards"),"article");put(card,"h3",(i+1)+". "+b.title);
+ put(card,"p",notes[i][0]);put(card,"p",notes[i][1]).className="correct";
+ put(card,"p",notes[i][2]);put(card,"p",b.key).className="muted";
+ if(b.transition)put(card,"p",b.transition).className="wrong";
+ linkWord(card,"Ensaiar bloco",b.first);
+});
+const factsTable=makeTable($("facts"),["Dado","O que recuperar"]);
+facts.forEach(f=>addRow(factsTable,f));
+const logicTable=makeTable($("logic"),["Elo","Âncora","Limite"]);
+[
+ ["Dor crônica → fibromialgia","Santiago, PCDT, Wolfe","35,70% refere-se à dor crônica em geral."],
+ ["Manejo → cannabis","EULAR, Strand, Lopera, AHRQ","A EULAR destaca exercício e cuidado individualizado. As evidências sobre cannabis são heterogêneas."],
+ ["Eventos → repercussões","Lopera, Varadpande","45,67% refere-se a evento adverso, enquanto a pergunta exige repercussão."],
+ ["Pergunta → cálculo","Pessoas positivas ÷ classificáveis","Escopo descritivo local, sem inferência causal ou populacional."],
+ ["Dados → utilidade","STROBE, LGPD/CNS e ficha","A ficha é uma proposta a validar."]
+].forEach(r=>addRow(logicTable,r));
+const summary=makeTable($("summary"),["Bloco","Início","Fim","Duração","Faixa global","Palavras","Palavras/min","Checkpoints"]);
+blocks.forEach((b,i)=>{
+ const tr=addRow(summary,["",stamp(b.start),stamp(b.start+b.seconds),stamp(b.seconds),(b.first+1)+"–"+(b.last+1),b.count,(b.count*60/b.seconds).toFixed(1).replace(".",","),words.slice(b.first,b.last+1).filter(w=>w.mark).length]);
+ linkWord(tr.cells[0],(i+1)+". "+b.title,b.first);
+});
+addRow(summary,["Total",stamp(0),stamp(total),stamp(total),"1–"+words.length,words.length,(words.length*60/total).toFixed(1).replace(".",","),words.filter(w=>w.mark).length]);
+addRow(summary,["Margem",stamp(total),stamp(600),stamp(600-total),"—",0,"—","—"]);
+function filtered(){
+ const query=fold($("filter").value.trim()), selected=$("filterBlock").value;
+ return words.map((w,i)=>({w,i})).filter(({w,i})=>(selected==="all"||String(w.bi)===selected)&&(!query||(/^\d+$/.test(query)?String(i+1)===query||fold(w.word).includes(query):fold(w.word).includes(query))));
+}
+function dataRow(w,i){
+ return [i+1,(w.bi+1)+" · "+(w.local+1),w.word,stamp(w.start,2),stamp(w.end,2),stamp(w.start-blocks[w.bi].start,2),[w.mark,w.transition?"Transição":""].filter((s,i,a)=>s&&a.indexOf(s)===i).join(" · "),w.gloss];
+}
+function drawRows(){
+ const filteredWords=filtered(), fragment=document.createDocumentFragment();
+ for(const {w,i} of filteredWords){const tr=addRow(fragment,dataRow(w,i));tr.cells[2].replaceChildren();linkWord(tr.cells[2],w.word,i)}
+ $("rows").replaceChildren(fragment);$("count").textContent=filteredWords.length+" de "+words.length+" palavras.";
+}
+$("filter").oninput=drawRows;$("filterBlock").onchange=drawRows;
+$("csv").onclick=()=>{
+ const headings=["n_global","bloco_e_n_local","palavra","inicio","fim","inicio_no_bloco","checkpoint","apoio"];
+ const quoted=value=>'"'+String(value).replaceAll('"','""')+'"';
+ const content=[headings,...filtered().map(({w,i})=>dataRow(w,i))].map(row=>row.map(quoted).join(";")).join("\r\n");
+ const href=URL.createObjectURL(new Blob(["\uFEFF",content],{type:"text/csv;charset=utf-8"}));
+ const anchor=el("a");anchor.href=href;anchor.download="tempos_arguicao.csv";anchor.click();setTimeout(()=>URL.revokeObjectURL(href),1500);
+};
+const focusMode=$("focusMode");
+function setFocus(enabled){
+ document.body.toggleAttribute("data-focus",enabled);
+ focusMode.setAttribute("aria-pressed",enabled);
+ focusMode.textContent=enabled?"Sair do modo foco":"Modo foco";
+}
+focusMode.onclick=()=>setFocus(!document.body.hasAttribute("data-focus"));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")setFocus(false)});
+let soloStart=null,soloBlock=0,soloTimer=0;
+function setSolo(active){
+ $("solo").hidden=active;$("lap").hidden=!active;$("stopSolo").hidden=!active;$("play").disabled=active;
+}
+function soloElapsed(){return (performance.now()-soloStart)/1000}
+function finishSolo(){
+ const seconds=soloElapsed();clearInterval(soloTimer);soloStart=null;setSolo(false);
+ $("soloResult").textContent="Fala concluída em "+stamp(seconds,1)+" · "+(seconds<=600?"margem de "+stamp(600-seconds,1):"excedeu 10 min em "+stamp(seconds-600,1));
+}
+$("solo").onclick=()=>{
+ seek(0);$("hide").checked=true;renderWord();soloBlock=0;soloStart=performance.now();setSolo(true);
+ const tick=()=>{$("clock").textContent=stamp(soloElapsed(),1)+" · fala livre · alvo "+stamp(blocks[soloBlock].start+blocks[soloBlock].seconds)};
+ $("soloResult").textContent="Marque o fim de cada bloco para comparar com o tempo previsto.";
+ tick();soloTimer=setInterval(tick,100);
+};
+$("lap").onclick=()=>{
+ const b=blocks[soloBlock];const delta=soloElapsed()-(b.start+b.seconds);
+ if(soloBlock===blocks.length-1){finishSolo();return}
+ $("soloResult").textContent="Bloco "+(soloBlock+1)+" · "+stamp(Math.abs(delta),1)+(delta>0?" após o marco":" antes do marco");
+ soloBlock++;seek(blocks[soloBlock].first);
+};
+$("stopSolo").onclick=finishSolo;
+refreshMaster();renderWord();renderClock();
+</script>
