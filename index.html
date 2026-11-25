@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ensaio de arguição · PPGSC UFPB</title>
+<meta name="description" content="Ensaio palavra por palavra, ritmo por bloco e desafios de memorização para a arguição do PPGSC UFPB.">
 <style>
 :root{color-scheme:dark;--bg:#0b151a;--panel:#132329;--ink:#f2f7f6;--muted:#adc4c2;--accent:#a7efce;--line:#345056;--gold:#ffdf9b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:clamp(14px,4vw,48px)}h1,h2,h3,p{margin:0 0 .55em}h1{font:clamp(2.3rem,6vw,4.4rem)/1.04 Georgia,serif;letter-spacing:-.045em}header{margin-bottom:1.65rem}.eyebrow{color:var(--accent);letter-spacing:.11em;font-size:.8rem;font-weight:700}.muted,small{color:var(--muted)}nav,.bar,.stats{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;margin:.8rem 0}.stats>span{border:1px solid var(--line);border-radius:2rem;padding:.3rem .8rem}button,input,select,textarea{font:inherit;color:inherit;background:#192f36;border:1px solid var(--line);border-radius:.55rem;padding:.45rem .7rem}button{cursor:pointer}button:hover{border-color:var(--accent)}button[aria-pressed=true],.primary{background:var(--accent);color:#102720;font-weight:750}button:disabled{opacity:.45;cursor:default}:focus-visible{outline:2px solid var(--gold);outline-offset:3px}.grid{display:grid;grid-template-columns:minmax(205px,1fr) minmax(0,3.4fr);gap:1rem}.panel{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:clamp(12px,2.2vw,25px)}aside button{display:block;width:100%;text-align:left;margin:.4rem 0}aside button small,aside button strong{display:block}aside button[aria-pressed=true] small{color:#244137}.stage{background:#0d1b21;border-radius:.8rem;padding:1.15rem;margin:.9rem 0;min-height:130px}.current{color:var(--accent);font:clamp(1.9rem,7vw,4rem)/1.15 Georgia,serif;overflow-wrap:anywhere}.reading{line-height:2.0;max-height:16rem;overflow:auto;padding:.25rem}.word{border:0;background:none;padding:.04em .15em;border-radius:.25em}.word.active{background:var(--accent);color:#102720}.word.transition{border-bottom:1px dotted var(--gold)}progress{width:100%;accent-color:var(--accent)}.scroll{overflow:auto;max-height:65vh}table{width:100%;border-collapse:collapse;text-align:left;font-variant-numeric:tabular-nums}td,th{padding:.52rem .62rem;border-bottom:1px solid var(--line)}th{position:sticky;top:0;background:#192f36}textarea{display:block;width:100%;min-height:155px}input[type=number]{width:6rem}.wrong{color:var(--gold)}.correct{color:var(--accent)}.support{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.support article{border:1px solid var(--line);border-radius:.7rem;padding:.85rem}details{margin-top:1.1rem}summary{cursor:pointer;color:var(--accent)}[hidden]{display:none!important}@media(max-width:670px){.grid{grid-template-columns:1fr}aside #blocks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem}aside button{margin:0}button,input,select{max-width:100%}}
@@ -26,6 +27,14 @@ body[data-focus] .grid{grid-template-columns:1fr}body[data-focus] .stage{min-hei
 #labRate{width:5.5rem}#labStatus{min-height:1.5em}#labTools kbd{border:1px solid var(--line);padding:.08em .3em;border-radius:.25rem}
 @media(max-width:670px){#labTools .bar label{flex:1 1 100%}#labTools button{flex:1 1 auto}#labStageActions button{flex:1}#labTools{padding:.65rem}}
 
+#labQuick{padding:.55rem .7rem;border:1px solid var(--line);border-radius:.7rem;background:#0e1e24}
+#labQuick label{display:flex;align-items:center;flex-wrap:wrap;gap:.45rem}
+#labStats{margin:.55rem 0}#labStatus:empty,#soloResult:empty,#labQuiz p:empty{display:none}
+#labQuiz label{display:block;margin-bottom:.42rem}#labQuiz button{margin:.2rem}
+#labTimeline{padding:0;display:block;margin:.6rem 0;border:0}
+.stage{border-color:#47716a;min-height:clamp(160px,22vh,270px)}
+body[data-focus] #labTools{display:none}
+@media(max-width:670px){#labQuick label{flex:1 1 100%}#labQuick select{flex:1;min-width:0}.grid section{display:flex;flex-direction:column}.grid aside{order:2}.grid section nav{margin-top:0}}
 </style>
 <main><header><p class="eyebrow">PPGSC · UFPB 2027</p><h1>Ensaio de arguição</h1><div class="stats" id="totals"></div><p class="muted">Discurso integral com navegação por palavra, treino de evocação e conferência literal.</p></header>
 <div class="grid"><aside class="panel"><h2>Blocos</h2><div id="blocks"></div><p class="muted" id="master"></p></aside>
@@ -360,11 +369,12 @@ refreshMaster();renderWord();renderClock();
 (function(){
  const modes=[["full","Integral"],["initial","Apenas iniciais"],["prefix","Início da palavra"],["suffix","Final da palavra"],["skeleton","Consoantes"],["cloze","Lacunas progressivas"],["blind","Sem pistas"],["quiz","Digitar a palavra"]];
  const oldRender=renderWord,oldClock=renderClock,oldBlock=renderBlock;
- const defaults=()=>({mode:"full",rate:1,amount:45,context:true,gloss:false,autoLevel:false,targets:blocks.map(b=>b.seconds),xp:0,streak:0,bestStreak:0,correct:0,attempts:0,selfKnown:0,selfHard:0,selfMiss:0,history:{},loop:false});
+ const defaults=()=>({mode:"full",rate:1,amount:45,context:true,gloss:false,autoLevel:false,targets:blocks.map(b=>b.seconds),xp:0,streak:0,bestStreak:0,correct:0,attempts:0,selfKnown:0,selfHard:0,selfMiss:0,history:{},loop:false,scope:"all"});
  const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
  const num=(v,d,a,b)=>Number.isFinite(Number(v))?clamp(Number(v),a,b):d;
  function sanitize(obj){
   const d=defaults();if(!obj||typeof obj!=="object")return d;
+  d.scope=obj.scope==="block"?"block":"all";
   d.mode=modes.some(x=>x[0]===obj.mode)?obj.mode:d.mode;
   d.rate=num(obj.rate,1,.25,3);d.amount=num(obj.amount,45,0,100);
   for(const k of ["context","gloss","autoLevel","loop"])if(typeof obj[k]==="boolean")d[k]=obj[k];
@@ -374,9 +384,9 @@ refreshMaster();renderWord();renderClock();
   for(const [k,v] of Object.entries(obj.history||{}))if(/^\d+$/.test(k)&&+k<words.length&&v&&typeof v==="object")d.history[k]={ok:Math.floor(num(v.ok,0,0,100000)),miss:Math.floor(num(v.miss,0,0,100000)),hard:Math.floor(num(v.hard,0,0,100000))};
   return d;
  }
- let lab=sanitize(saved.readerLab);let revealed=-1;let quizAnswered=false;let quizIndex=-1;let challengeMode=false;
+ let lab=sanitize(saved.readerLab);let revealed=-1;let quizAnswered=false;let quizIndex=-1;let queue=[],step=0,playbackEnd=total;
  function store(){saved.readerLab=lab;save()}
- const tools=el("details");tools.id="labTools";tools.open=true;
+ const tools=el("details");tools.id="labTools";tools.open=false;
  put(tools,"summary","Laboratório de leitura e desafios");
  const description=put(tools,"p","O texto permanece literal. Os tempos originais são preservados; o ritmo personalizado altera apenas a reprodução.");description.className="muted";
  const bar=()=>{const x=put(tools,"div");x.className="bar";return x};
@@ -384,7 +394,12 @@ refreshMaster();renderWord();renderClock();
  function input(p,id,type,value,min,max,step){const e=put(p,"input");e.id=id;e.type=type;if(value!==undefined)e.value=value;if(min!==undefined)e.min=min;if(max!==undefined)e.max=max;if(step!==undefined)e.step=step;return e}
  function check(p,id,title){const l=label(p,"");const e=input(l,id,"checkbox");l.append(document.createTextNode(" "+title));return e}
  function button(p,id,t,fn){const b=put(p,"button",t);b.id=id;b.type="button";b.onclick=fn;return b}
- const a=bar(), mode=put(label(a,"Modo"),"select");mode.id="labMode";
+ const quick=el("div");quick.className="bar";quick.id="labQuick";
+ const mode=put(label(quick,"Pista"),"select");mode.id="labMode";
+ const scope=put(label(quick,"Reproduzir"),"select");scope.id="labScope";
+ put(scope,"option","Discurso completo").value="all";
+ put(scope,"option","Até o fim deste bloco").value="block";
+ const a=bar();
  for(const [id,title] of modes)put(mode,"option",title).value=id;
  const speed=input(label(a,"Velocidade global ×"),"labRate","number",1,.25,3,.05);
  const amount=input(label(a,"Intensidade / %"),"labAmount","range",45,0,100,5);
@@ -406,7 +421,24 @@ refreshMaster();renderWord();renderClock();
  const keys=put(tools,"details");put(keys,"summary","Atalhos de teclado");
  put(keys,"p","Espaço: iniciar/pausar · ←/→: palavra · Shift+←/→: bloco · ↑/↓: velocidade · Home/End: início/fim do bloco · R: reiniciar bloco · M: trocar pista · H: revelar · L: repetir · F: foco · 1: acertei · 2: difícil · 3: errei · Esc: sair do foco/pausar.");
  const status=put(tools,"p");status.id="labStatus";status.className="coach";status.setAttribute("role","status");
- $("run").insertBefore(tools,$("progress"));
+ $("run").insertBefore(quick,$("progress"));
+ $("run").insertBefore(timeline,$("clock"));
+ $("run").insertBefore(status,$("progress"));
+ $("reading").after(tools);
+ label(quick,"Velocidade").append(speed);
+ button(quick,"labSettings","Ajustes e atalhos",()=>{
+  if(document.body.hasAttribute("data-focus"))setFocus(false);
+  tools.open=true;tools.querySelector("summary").focus();
+ });
+ const priority=v=>v.miss*2+v.hard-v.ok;
+ const reviewButton=button(quick,"labReview","Revisar palavras difíceis",()=>{
+  if(queue.length){endReview("Revisão encerrada.");return}
+  const pending=Object.entries(lab.history).filter(([,v])=>priority(v)>0)
+   .sort((a,b)=>priority(b[1])-priority(a[1])).slice(0,12).map(([i])=>Number(i));
+  if(!pending.length){status.textContent="Marque uma palavra como difícil ou erre no desafio para iniciar a revisão.";return}
+  setMode("quiz");queue=pending;step=0;reviewButton.textContent="Encerrar revisão";
+  seek(queue[0]);showReview();answer.focus();
+ });
  const stageActions=el("div");stageActions.className="bar";stageActions.id="labStageActions";
  $("gloss").after(stageActions);
  button(stageActions,"labReveal","Revelar / ocultar (H)",()=>{revealed=revealed===index?-1:index;renderWord()});
@@ -417,7 +449,7 @@ refreshMaster();renderWord();renderClock();
  const quizLabel=label(quiz,"Qual é a palavra exata? ");
  const answer=input(quizLabel,"labAnswer","text","");answer.autocomplete="off";answer.spellcheck=false;
  const submit=put(quiz,"button","Conferir (Enter)");submit.type="submit";submit.className="primary";
- const qnext=button(quiz,"labQuizNext","Próxima",()=>seek(index+1));
+ const qnext=button(quiz,"labQuizNext","Próxima",()=>nextQuiz());
  const feedback=put(quiz,"p");feedback.setAttribute("role","status");
  stageActions.after(quiz);
  function rateFor(bi){return lab.rate*blocks[bi].seconds/lab.targets[bi]}
@@ -440,7 +472,7 @@ refreshMaster();renderWord();renderClock();
   }).join("");
  }
  function sync(){
-  mode.value=lab.mode;speed.value=lab.rate;amount.value=lab.amount;amountLabel.textContent=lab.amount+"%";
+  mode.value=lab.mode;scope.value=lab.scope;speed.value=lab.rate;amount.value=lab.amount;amountLabel.textContent=lab.amount+"%";
   ctx.checked=lab.context;gloss.checked=lab.gloss;adaptive.checked=lab.autoLevel;
   const bi=words[index].bi,block=blocks[bi];target.value=Math.round(lab.targets[bi]*10)/10;wpm.value=Math.round(block.count*60/lab.targets[bi]);
   $("loop").checked=lab.loop;
@@ -451,9 +483,27 @@ refreshMaster();renderWord();renderClock();
   addRow(rows,["Total",stamp(total),stamp(lab.targets.reduce((a,b)=>a+b,0),1),Math.round(words.length*60/adjusted(total))+" ppm"]);
   renderWord();renderClock();
  }
- function setMode(v){pause();lab.mode=v;revealed=-1;quizIndex=-1;$("hide").checked=false;store();sync();if(v==="quiz")answer.focus()}
- function changeRate(v){lab.rate=num(v,lab.rate,.25,3);store();sync()}
+ function showReview(){
+  status.textContent="Revisão "+(step+1)+"/"+queue.length+" · palavra "+(index+1);
+ }
+ function endReview(message){
+  if(!queue.length)return;
+  queue=[];reviewButton.textContent="Revisar palavras difíceis";status.textContent=message||"";
+  qnext.disabled=index===words.length-1;
+ }
+ function nextQuiz(){
+  if(queue.length){
+   if(!quizAnswered)return;
+   step++;
+   if(step>=queue.length){endReview("Revisão concluída.");return}
+   seek(queue[step]);showReview();
+  }else if(index<words.length-1)seek(index+1);
+  answer.focus();
+ }
+ function setMode(v){endReview();pause();lab.mode=v;revealed=-1;quizIndex=-1;$("hide").checked=false;store();sync();if(v==="quiz")answer.focus()}
+ function changeRate(v){lab.rate=Math.round(num(v,lab.rate,.25,3)*100)/100;store();sync()}
  mode.onchange=()=>setMode(mode.value);speed.onchange=()=>changeRate(speed.value);
+ scope.onchange=()=>{pause();lab.scope=scope.value;store()};
  amount.oninput=()=>{lab.amount=+amount.value;amountLabel.textContent=lab.amount+"%";store();renderWord()};
  target.onchange=()=>{lab.targets[words[index].bi]=num(target.value,blocks[words[index].bi].seconds,10,1200);store();sync()};
  wpm.onchange=()=>{const bi=words[index].bi;lab.targets[bi]=clamp(blocks[bi].count*60/num(wpm.value,120,10,1000),10,1200);store();sync()};
@@ -471,13 +521,15 @@ refreshMaster();renderWord();renderClock();
   store();
  }
  function mark(kind){if(lab.mode==="quiz"||soloStart!==null)return;record(kind,false);status.textContent="Autoavaliação registrada na palavra "+(index+1)+": "+({ok:"acertei",hard:"difícil",miss:"errei"}[kind]);if(!running&&index<words.length-1)seek(index+1);sync()}
- quiz.onsubmit=e=>{e.preventDefault();if(quizAnswered)return;const expected=words[index].word.normalize("NFC");const response=answer.value.trim().normalize("NFC");if(!response)return;const ok=response===expected;record(ok?"ok":"miss",true);quizAnswered=true;feedback.textContent=(ok?"Correto. ":"Resposta esperada: "+expected+". ")+"XP "+lab.xp+" · sequência "+lab.streak;revealed=index;sync();qnext.focus()};
+ quiz.onsubmit=e=>{e.preventDefault();if(quizAnswered)return;const expected=words[index].word.normalize("NFC");const response=answer.value.trim().normalize("NFC");if(!response)return;const ok=response===expected;record(ok?"ok":"miss",true);quizAnswered=true;feedback.textContent=(ok?"Correto. ":"Resposta esperada: "+expected+". ")+"XP "+lab.xp+" · sequência "+lab.streak;revealed=index;sync();if(!qnext.disabled)qnext.focus()};
  renderBlock=function(bi){oldBlock(bi);if(target){target.value=lab.targets[bi];wpm.value=Math.round(blocks[bi].count*60/lab.targets[bi])}};
  let priorContextMode="",priorBlock=-1;
  renderWord=function(){
   oldRender();const w=words[index],b=blocks[w.bi];timeline.value=index;
   target.value=document.activeElement===target?target.value:Math.round(lab.targets[w.bi]*10)/10;
   wpm.value=document.activeElement===wpm?wpm.value:Math.round(b.count*60/lab.targets[w.bi]);
+  if(queue.length&&queue[step]!==index)endReview("Revisão encerrada ao mudar de trecho.");
+  if(quizIndex!==index){quizIndex=index;quizAnswered=false;answer.value="";feedback.textContent="";revealed=-1}
   const hidden=$("hide").checked||soloStart!==null;const chosen=hidden?"blind":lab.mode;
   $("current").textContent=hidden?"•••":revealed===index?w.word:mask(w.word,index,chosen);
   $("gloss").textContent=!hidden&&(lab.gloss||chosen==="full")&&w.gloss?"Pista de sentido · "+w.gloss:"";
@@ -487,8 +539,14 @@ refreshMaster();renderWord();renderClock();
   quiz.hidden=hidden||chosen!=="quiz";
   stageActions.hidden=hidden;
   for(const id of ["labKnown","labHard","labMiss"])$(id).hidden=chosen==="quiz";
-  if(quizIndex!==index){quizIndex=index;quizAnswered=false;answer.value="";feedback.textContent="";revealed=-1}
-  answer.disabled=quizAnswered;submit.disabled=quizAnswered;qnext.disabled=index===words.length-1;
+  for(const option of $("checkpoint").options){
+   if(option.value==="")continue;
+   const checkpoint=words[Number(option.value)];
+   option.textContent=stamp(checkpoint.start,1)+" · "+checkpoint.mark+(chosen==="full"?" · "+checkpoint.word:"");
+  }
+  answer.disabled=quizAnswered;submit.disabled=quizAnswered;
+  qnext.disabled=queue.length?!quizAnswered:index===words.length-1;
+  if(chosen==="quiz")$("play").textContent=quizAnswered?"Próxima palavra":"Responder";
  };
  $("hide").onchange=()=>{revealed=-1;renderWord()};
  renderClock=function(){oldClock();const bi=words[index].bi;times.textContent="Ritmo efetivo "+Math.round(blocks[bi].count*60/lab.targets[bi]*lab.rate)+" ppm · Tempo ajustado "+stamp(adjusted(cursor),1)+" / "+stamp(adjusted(total),1)+" · "+(adjusted(total)<=600?"Margem "+stamp(600-adjusted(total),1):"Excesso "+stamp(adjusted(total)-600,1))};
@@ -497,18 +555,30 @@ refreshMaster();renderWord();renderClock();
   if(!running)return;
   let remaining=Math.max(0,(now-lastFrame)/1000);lastFrame=now;
   const loopBi=words[index].bi;
-  while(remaining>1e-7&&cursor<total){
+  while(remaining>1e-7&&cursor<playbackEnd){
    const bi=lab.loop?loopBi:words[positionAt(cursor)].bi,b=blocks[bi],end=b.start+b.seconds,r=rateFor(bi);
    const until=Math.max(0,(end-cursor)/r);
    if(remaining<until){cursor+=remaining*r;remaining=0}
-   else{remaining-=until;cursor=end;if(lab.loop){cursor=b.start;remaining%=lab.targets[bi]/lab.rate}else if(cursor>=total)break;else if(until===0){cursor=Math.min(total,cursor+1e-8)}}
+   else{remaining-=until;cursor=end;if(lab.loop){cursor=b.start;remaining%=lab.targets[bi]/lab.rate}else if(cursor>=playbackEnd)break;else if(until===0){cursor=Math.min(total,cursor+1e-8)}}
   }
-  cursor=Math.min(cursor,total);const next=positionAt(cursor);
+  cursor=Math.min(cursor,playbackEnd);const next=positionAt(cursor===playbackEnd?Math.max(0,cursor-1e-8):cursor);
   if(next!==index){index=next;revealed=-1;renderWord()}renderClock();
-  if(cursor>=total)pause();else raf=requestAnimationFrame(frame);
+  if(cursor>=playbackEnd){pause();if(playbackEnd<total){$("play").textContent="Repetir bloco";status.textContent="Fim do bloco."}}else raf=requestAnimationFrame(frame);
  };
  const oldToggle=toggle;
- toggle=function(){if(lab.mode==="quiz"&&!$("hide").checked){if(!quizAnswered){answer.focus();status.textContent="Conferir a palavra antes de avançar (ou usar a seta direita)."}else if(index<words.length-1){seek(index+1);answer.focus()}return}oldToggle()};
+ toggle=function(){
+  if(soloStart!==null)return;
+  if(lab.mode==="quiz"&&!$("hide").checked){
+   if(!quizAnswered)answer.focus();else nextQuiz();
+   return;
+  }
+  if(!running&&cursor>=total&&lab.scope==="all")seek(0);
+  const b=blocks[words[index].bi];
+  if(!running&&cursor>=b.start+b.seconds&&lab.scope==="block")seek(b.first);
+  playbackEnd=lab.scope==="block"?b.start+b.seconds:total;
+  status.textContent="";
+  oldToggle();
+ };
  $("play").onclick=toggle;
  document.addEventListener("visibilitychange",()=>{if(document.hidden&&running)pause()});
  document.addEventListener("keydown",e=>{
@@ -517,6 +587,7 @@ refreshMaster();renderWord();renderClock();
   const map={" ":()=>toggle(),ArrowLeft:()=>seek(e.shiftKey?blocks[Math.max(0,bi-1)].first:index-1),ArrowRight:()=>seek(e.shiftKey?blocks[Math.min(blocks.length-1,bi+1)].first:index+1),ArrowUp:()=>changeRate(lab.rate+.05),ArrowDown:()=>changeRate(lab.rate-.05),Home:()=>seek(blocks[bi].first),End:()=>seek(blocks[bi].last),r:()=>seek(blocks[bi].first),m:()=>setMode(modes[(modes.findIndex(x=>x[0]===lab.mode)+1)%modes.length][0]),h:()=>$("labReveal").click(),l:()=>{lab.loop=!lab.loop;store();sync()},f:()=>setFocus(!document.body.hasAttribute("data-focus")),1:()=>mark("ok"),2:()=>mark("hard"),3:()=>mark("miss"),Escape:()=>{pause();setFocus(false)}};
   const action=map[e.key.length===1?e.key.toLowerCase():e.key];if(!action)return;
   if(e.key===" "&&e.target.closest("button,summary,a"))return;
+  if(e.repeat&&!e.key.startsWith("Arrow"))return;
   e.preventDefault();e.stopImmediatePropagation();if(soloStart!==null&&e.key!=="Escape")return;action();
  },true);
  function downloadLab(name,content,type){const href=URL.createObjectURL(new Blob([content],{type}));const a=el("a");a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1500)}
@@ -526,7 +597,16 @@ refreshMaster();renderWord();renderClock();
  restore.textContent="Importar progresso e configurações";
  const legacyImport=upload.onchange;
  upload.onchange=async()=>{const file=upload.files[0];if(!file)return;let data;try{if(file.size>250000)throw Error();data=JSON.parse(await file.text());if(data.format!==storageKey)throw Error()}catch{transferStatus.textContent="Arquivo de progresso inválido.";upload.value="";return}
-  await legacyImport();if(data.readerLab){lab=sanitize(data.readerLab);store();sync();transferStatus.textContent="Progresso anterior preservado; ritmos, modos e estatísticas do laboratório importados."}
+  await legacyImport();if(data.readerLab){
+   endReview();const incoming=sanitize(data.readerLab);
+   for(const k of ["xp","bestStreak","correct","attempts","selfKnown","selfHard","selfMiss"])incoming[k]=Math.max(incoming[k],lab[k]);
+   for(const [i,h] of Object.entries(lab.history)){
+    const record=incoming.history[i]||{ok:0,miss:0,hard:0};
+    for(const k of ["ok","miss","hard"])record[k]=Math.max(record[k],h[k]);
+    incoming.history[i]=record;
+   }
+   lab=incoming;store();sync();transferStatus.textContent="Configurações importadas. Melhores resultados e histórico combinados.";
+  }
  };
  store();sync();
 })();
